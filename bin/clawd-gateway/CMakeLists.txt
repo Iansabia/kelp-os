@@ -45,6 +45,7 @@ target_link_libraries(clawd-gateway PRIVATE PkgConfig::MICROHTTPD)
 # agents library (if available as a target)
 if(TARGET clawd-agents)
     target_link_libraries(clawd-gateway PRIVATE clawd-agents)
+    target_compile_definitions(clawd-gateway PRIVATE HAVE_AGENTS=1)
 endif()
 
 # systemd (Linux only, for sd_notify / sd-bus)

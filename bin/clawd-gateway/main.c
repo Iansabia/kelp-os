@@ -199,7 +199,7 @@ static struct MHD_Response *json_success_response(cJSON *result)
 
 static clawd_provider_type_t resolve_provider_type(const char *name)
 {
-    if (\!name)
+    if (!name)
         return CLAWD_PROVIDER_ANTHROPIC;
     if (strcmp(name, "openai") == 0)
         return CLAWD_PROVIDER_OPENAI;
@@ -219,7 +219,7 @@ static clawd_message_t *messages_from_json(cJSON *arr)
     cJSON_ArrayForEach(item, arr) {
         const char *role_str = clawd_json_get_string(item, "role");
         const char *content  = clawd_json_get_string(item, "content");
-        if (\!role_str || \!content) continue;
+        if (!role_str || !content) continue;
         clawd_role_t role = CLAWD_ROLE_USER;
         if (strcmp(role_str, "assistant") == 0) role = CLAWD_ROLE_ASSISTANT;
         else if (strcmp(role_str, "system") == 0) role = CLAWD_ROLE_SYSTEM;
@@ -871,17 +871,34 @@ static void unix_client_handle(int client_fd)
                 g_cfg.model.api_key);
             char *agent_response = NULL;
             if (provider) {
-                clawd_agent_opts_t aopts = {
-                    .provider = provider, .tools = NULL, .system_prompt = NULL,
-                    .max_turns = 10, .sandbox_tools = g_cfg.security.sandbox_enabled,
-                    .on_stream = NULL, .stream_userdata = NULL
+                /* Build a single user message */
+                clawd_message_t *msg_list = clawd_message_new(
+                    CLAWD_ROLE_USER, message);
+                const char *effective_model = g_cfg.model.default_model
+                    ? g_cfg.model.default_model : NULL;
+                clawd_completion_opts_t opts = {
+                    .model = effective_model, .messages = msg_list,
+                    .system_prompt = NULL,
+                    .max_tokens = 4096,
+                    .temperature = g_cfg.model.temperature,
+                    .tools_json = NULL,
+                    .stream = false, .stream_cb = NULL,
+                    .stream_userdata = NULL
                 };
-                clawd_agent_t *agent = clawd_agent_new(&aopts);
-                if (agent) {
-                    clawd_agent_chat(agent, message, &agent_response);
-                    clawd_agent_free(agent);
+                clawd_completion_t comp;
+                memset(&comp, 0, sizeof(comp));
+                int rc = clawd_provider_complete(provider, &opts, &comp);
+                if (rc == 0 && comp.content) {
+                    agent_response = comp.content;
+                    comp.content = NULL;
+                } else {
+                    CLAWD_ERROR("chat.send: provider complete failed (rc=%d)", rc);
                 }
+                clawd_completion_free(&comp);
+                clawd_message_free(msg_list);
                 clawd_provider_free(provider);
+            } else {
+                CLAWD_ERROR("chat.send: provider creation failed");
             }
             cJSON *result = cJSON_AddObjectToObject(resp, "result");
             cJSON_AddStringToObject(result, "content",
@@ -1337,6 +1354,9 @@ int main(int argc, char **argv)
             CLAWD_WARN("cannot open log file %s: %s",
                        g_cfg.logging.file, strerror(errno));
     }
+
+    /* Initialize HTTP subsystem (curl). */
+    clawd_http_init();
 
     /* Initialize audit logging. */
     {
