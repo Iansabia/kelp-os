@@ -560,6 +560,16 @@ memory_init_schema(clawd_memory_t *mem)
 static int
 memory_try_load_vec(clawd_memory_t *mem)
 {
+#ifdef __APPLE__
+    /*
+     * macOS system sqlite3 omits sqlite3_load_extension().
+     * sqlite-vec is a Linux deployment target; skip on macOS.
+     */
+    (void)mem;
+    mem->has_vec = false;
+    CLAWD_DEBUG("sqlite-vec not available on macOS; vector search disabled");
+    return -1;
+#else
     /* Enable loading extensions. */
     sqlite3_db_config(mem->db, SQLITE_DBCONFIG_ENABLE_LOAD_EXTENSION, 1, NULL);
 
@@ -594,6 +604,7 @@ memory_try_load_vec(clawd_memory_t *mem)
     mem->has_vec = false;
     CLAWD_DEBUG("sqlite-vec not found; vector search disabled");
     return -1;
+#endif
 }
 
 static int

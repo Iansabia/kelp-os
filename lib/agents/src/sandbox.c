@@ -12,11 +12,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #ifdef __linux__
 
 #include <sched.h>
-#include <unistd.h>
 #include <sys/wait.h>
 #include <signal.h>
 #include <errno.h>
