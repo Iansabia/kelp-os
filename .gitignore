@@ -95,3 +95,21 @@ package-lock.json
 
 # Local iOS signing overrides
 apps/ios/LocalSigning.xcconfig
+
+# Clawd Linux C build artifacts
+build/
+*.o
+*.so
+*.so.*
+*.a
+*.deb
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+CTestTestfile.cmake
+CPackConfig.cmake
+CPackSourceConfig.cmake
+_CPack_Packages/
+compile_commands.json
+Testing/
