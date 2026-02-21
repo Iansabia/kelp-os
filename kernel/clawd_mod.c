@@ -28,7 +28,7 @@
 #include <linux/tcp.h>
 #include <linux/udp.h>
 
-#include "clawd_kernel.h"
+#include "clawd_internal.h"
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Clawd Project");
@@ -60,33 +60,12 @@ static atomic_t open_count = ATOMIC_INIT(0);
 #define RING_SIZE 64
 #define MSG_MAX_LEN CLAWD_MAX_MSG_SIZE
 
-struct ring_msg {
-    char   *data;
-    size_t  len;
-};
-
 static struct ring_msg ring_buf[RING_SIZE];
 static int ring_head;  /* Write position */
 static int ring_tail;  /* Read position */
 static DEFINE_SPINLOCK(ring_lock);
 static DECLARE_WAIT_QUEUE_HEAD(read_queue);
 static DECLARE_WAIT_QUEUE_HEAD(write_queue);
-
-/* Forward declarations */
-extern int  clawd_chardev_open(struct inode *inode, struct file *file);
-extern int  clawd_chardev_release(struct inode *inode, struct file *file);
-extern ssize_t clawd_chardev_read(struct file *file, char __user *buf,
-                                   size_t count, loff_t *ppos);
-extern ssize_t clawd_chardev_write(struct file *file, const char __user *buf,
-                                    size_t count, loff_t *ppos);
-extern long clawd_chardev_ioctl(struct file *file, unsigned int cmd,
-                                 unsigned long arg);
-
-extern int  clawd_procfs_init(void);
-extern void clawd_procfs_exit(void);
-
-extern int  clawd_netfilter_init(void);
-extern void clawd_netfilter_exit(void);
 
 /* File operations */
 static const struct file_operations clawd_fops = {

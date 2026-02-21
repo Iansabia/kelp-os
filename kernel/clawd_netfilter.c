@@ -17,11 +17,7 @@
 #include <linux/spinlock.h>
 #include <linux/slab.h>
 
-#include "clawd_kernel.h"
-
-/* External accessors */
-extern struct clawd_kstats *clawd_get_stats(void);
-extern int clawd_get_log_level(void);
+#include "clawd_internal.h"
 
 /* Recent connection log — circular buffer of recent network events */
 #define NF_LOG_SIZE 256

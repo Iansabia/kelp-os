@@ -13,31 +13,11 @@
 #include <linux/sched.h>
 #include <linux/ktime.h>
 
-#include "clawd_kernel.h"
+#include "clawd_internal.h"
 
 /* Ring buffer parameters */
 #define RING_SIZE 64
 #define MSG_MAX_LEN CLAWD_MAX_MSG_SIZE
-
-struct ring_msg {
-    char   *data;
-    size_t  len;
-};
-
-/* External accessors from clawd_mod.c */
-extern struct clawd_kstats *clawd_get_stats(void);
-extern int clawd_get_log_level(void);
-extern int clawd_get_netfilter_enabled(void);
-extern ktime_t clawd_get_start_time(void);
-extern atomic_t *clawd_get_open_count(void);
-extern struct mutex *clawd_get_mutex(void);
-
-extern struct ring_msg *clawd_get_ring(void);
-extern int *clawd_get_ring_head(void);
-extern int *clawd_get_ring_tail(void);
-extern spinlock_t *clawd_get_ring_lock(void);
-extern wait_queue_head_t *clawd_get_read_queue(void);
-extern wait_queue_head_t *clawd_get_write_queue(void);
 
 /* Per-file private data */
 struct clawd_file_data {
@@ -265,7 +245,7 @@ long clawd_chardev_ioctl(struct file *file, unsigned int cmd,
             .minor = 1,
             .patch = 0,
         };
-        snprintf(ver.build, sizeof(ver.build), "%s %s", __DATE__, __TIME__);
+        strscpy(ver.build, "clawd 0.1.0", sizeof(ver.build));
         if (copy_to_user((void __user *)arg, &ver, sizeof(ver)))
             return -EFAULT;
         return 0;

@@ -10,19 +10,10 @@
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
 #include <linux/ktime.h>
+#include <linux/slab.h>
 #include <linux/time64.h>
 
-#include "clawd_kernel.h"
-
-/* External accessors */
-extern struct clawd_kstats *clawd_get_stats(void);
-extern int clawd_get_log_level(void);
-extern int clawd_get_netfilter_enabled(void);
-extern ktime_t clawd_get_start_time(void);
-extern atomic_t *clawd_get_open_count(void);
-
-/* External netfilter log */
-extern int clawd_nf_get_recent(char *buf, size_t buf_size);
+#include "clawd_internal.h"
 
 static struct proc_dir_entry *proc_dir;
 static struct proc_dir_entry *proc_stats;
@@ -74,7 +65,7 @@ static const struct proc_ops stats_proc_ops = {
  */
 static int netfilter_show(struct seq_file *m, void *v)
 {
-    char buf[4096];
+    char *buf;
     int len;
 
     seq_printf(m, "Recent Network Events\n");
@@ -85,12 +76,18 @@ static int netfilter_show(struct seq_file *m, void *v)
         return 0;
     }
 
-    len = clawd_nf_get_recent(buf, sizeof(buf));
+    buf = kmalloc(4096, GFP_KERNEL);
+    if (!buf)
+        return -ENOMEM;
+
+    len = clawd_nf_get_recent(buf, 4096);
     if (len > 0) {
         seq_printf(m, "%s", buf);
     } else {
         seq_printf(m, "  (no recent events)\n");
     }
+
+    kfree(buf);
 
     return 0;
 }
