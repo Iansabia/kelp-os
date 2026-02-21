@@ -443,7 +443,14 @@ static int anthropic_complete(clawd_provider_t *p,
     clawd_http_header_add(&headers, "content-type", "application/json");
     clawd_http_header_add(&headers, "anthropic-version", ANTHROPIC_VERSION);
     if (p->api_key) {
-        clawd_http_header_add(&headers, "x-api-key", p->api_key);
+        /* OAuth tokens (sk-ant-oat*) use Bearer auth; regular keys use x-api-key */
+        if (strncmp(p->api_key, "sk-ant-oat", 10) == 0) {
+            char bearer[8192];
+            snprintf(bearer, sizeof(bearer), "Bearer %s", p->api_key);
+            clawd_http_header_add(&headers, "Authorization", bearer);
+        } else {
+            clawd_http_header_add(&headers, "x-api-key", p->api_key);
+        }
     }
 
     const char *url = p->base_url ? p->base_url : ANTHROPIC_API_URL;
