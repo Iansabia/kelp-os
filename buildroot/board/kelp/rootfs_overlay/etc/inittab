@@ -18,8 +18,8 @@ null::sysinit:/bin/ln -sf /proc/self/fd/2 /dev/stderr
 # Init scripts (loads kernel module, starts gateway)
 ::sysinit:/etc/init.d/rcS
 
-# Primary console: launch Kelp TUI
-::respawn:/usr/bin/kelp-tui
+# Primary console: launch Kelp Desktop (falls back to TUI if no display)
+::respawn:/usr/bin/kelp-desktop
 
 # Backup shell on tty2 (Alt+F2 on real hardware)
 tty2::respawn:/sbin/getty 38400 tty2

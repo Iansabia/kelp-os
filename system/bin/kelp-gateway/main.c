@@ -1498,6 +1498,74 @@ static char *jsonrpc_dispatch(const char *request_data, size_t request_len)
         cJSON_AddStringToObject(result, "error",
                                 "kernel module only available on Linux");
 #endif
+    } else if (strncmp(method, "desktop.", 8) == 0) {
+        /*
+         * Desktop control methods — forwarded to kelp-desktop via
+         * a Unix socket at /run/kelp/desktop.sock.
+         * Methods: desktop.move_cursor, desktop.click, desktop.type,
+         *          desktop.open_panel, desktop.close_panel,
+         *          desktop.screenshot, desktop.get_state
+         */
+        char *params_str = params ? cJSON_PrintUnformatted(params) : NULL;
+
+        /* Connect to kelp-desktop control socket. */
+        int dfd = socket(AF_UNIX, SOCK_STREAM, 0);
+        if (dfd >= 0) {
+            struct sockaddr_un daddr;
+            memset(&daddr, 0, sizeof(daddr));
+            daddr.sun_family = AF_UNIX;
+            snprintf(daddr.sun_path, sizeof(daddr.sun_path),
+                     "/run/kelp/desktop.sock");
+
+            if (connect(dfd, (struct sockaddr *)&daddr, sizeof(daddr)) == 0) {
+                /* Send method + params as JSON. */
+                cJSON *dreq = cJSON_CreateObject();
+                cJSON_AddStringToObject(dreq, "method", method);
+                if (params_str)
+                    cJSON_AddRawToObject(dreq, "params", params_str);
+                char *dreq_str = cJSON_PrintUnformatted(dreq);
+                cJSON_Delete(dreq);
+
+                if (dreq_str) {
+                    size_t dlen = strlen(dreq_str);
+                    dreq_str[dlen] = '\0';
+                    write(dfd, dreq_str, dlen);
+                    write(dfd, "\n", 1);
+                    free(dreq_str);
+
+                    /* Read response. */
+                    char dbuf[16384];
+                    ssize_t dn = read(dfd, dbuf, sizeof(dbuf) - 1);
+                    if (dn > 0) {
+                        dbuf[dn] = '\0';
+                        cJSON *dresult = cJSON_Parse(dbuf);
+                        if (dresult) {
+                            cJSON_AddItemToObject(resp, "result", dresult);
+                        } else {
+                            cJSON *dr = cJSON_AddObjectToObject(resp, "result");
+                            cJSON_AddStringToObject(dr, "raw", dbuf);
+                        }
+                    } else {
+                        cJSON *err2 = cJSON_AddObjectToObject(resp, "error");
+                        cJSON_AddNumberToObject(err2, "code", -32000);
+                        cJSON_AddStringToObject(err2, "message",
+                                                "no response from desktop");
+                    }
+                }
+            } else {
+                cJSON *err2 = cJSON_AddObjectToObject(resp, "error");
+                cJSON_AddNumberToObject(err2, "code", -32000);
+                cJSON_AddStringToObject(err2, "message",
+                                        "desktop not connected");
+            }
+            close(dfd);
+        } else {
+            cJSON *err2 = cJSON_AddObjectToObject(resp, "error");
+            cJSON_AddNumberToObject(err2, "code", -32000);
+            cJSON_AddStringToObject(err2, "message",
+                                    "cannot create desktop socket");
+        }
+        free(params_str);
     } else {
         cJSON *err = cJSON_AddObjectToObject(resp, "error");
         cJSON_AddNumberToObject(err, "code", -32601);
@@ -1894,11 +1962,18 @@ static void usage(void)
         "  GET  /v1/sessions           List active sessions\n"
         "\n"
         "JSON-RPC methods (Unix socket / kernel channel):\n"
-        "  chat.send       Send a chat message\n"
-        "  health          Health check\n"
-        "  config.get      Get a configuration value\n"
-        "  sessions.list   List active sessions\n"
-        "  kernel.status   Kernel module statistics (Linux only)\n"
+        "  chat.send              Send a chat message\n"
+        "  health                 Health check\n"
+        "  config.get             Get a configuration value\n"
+        "  sessions.list          List active sessions\n"
+        "  kernel.status          Kernel module statistics (Linux only)\n"
+        "  desktop.move_cursor    Move AI cursor to (x, y)\n"
+        "  desktop.click          Click at (x, y)\n"
+        "  desktop.type           Type text into focused panel\n"
+        "  desktop.open_panel     Open a panel (chat/terminal/monitor/files)\n"
+        "  desktop.close_panel    Close a panel\n"
+        "  desktop.screenshot     Take a screenshot\n"
+        "  desktop.get_state      Get desktop state as JSON\n"
         "\n"
         "Kernel channel:\n"
         "  On Linux, if the kelp kernel module is loaded, the gateway\n"

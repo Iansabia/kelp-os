@@ -1,0 +1,53 @@
+#!/bin/sh
+#
+# S98desktop — Kelp OS graphical desktop init
+#
+# Runs after S99kelp starts the gateway.
+# Sets up DRM/GPU permissions and environment for kelp-desktop.
+#
+
+case "$1" in
+    start)
+        # Set up /dev/dri permissions
+        if [ -d /dev/dri ]; then
+            chmod 0666 /dev/dri/card* 2>/dev/null
+            chmod 0666 /dev/dri/renderD* 2>/dev/null
+        fi
+
+        # Set up /dev/input permissions for mouse/keyboard
+        if [ -d /dev/input ]; then
+            chmod 0666 /dev/input/event* 2>/dev/null
+        fi
+
+        # Export display environment
+        if [ -d /dev/dri ]; then
+            echo "export SDL_VIDEODRIVER=kmsdrm" > /etc/profile.d/kelp-desktop.sh
+        else
+            echo "export SDL_VIDEODRIVER=dummy" > /etc/profile.d/kelp-desktop.sh
+        fi
+        echo "export SDL_RENDER_DRIVER=software" >> /etc/profile.d/kelp-desktop.sh
+
+        # Create font cache
+        if command -v fc-cache >/dev/null 2>&1; then
+            fc-cache -f 2>/dev/null &
+        fi
+        ;;
+
+    stop)
+        # Kill desktop if running
+        killall kelp-desktop 2>/dev/null
+        ;;
+
+    restart)
+        "$0" stop
+        sleep 1
+        "$0" start
+        ;;
+
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+        ;;
+esac
+
+exit 0

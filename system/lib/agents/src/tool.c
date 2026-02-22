@@ -41,6 +41,73 @@ extern const kelp_tool_def_t kelp_file_read_tool_def;
 extern const kelp_tool_def_t kelp_file_write_tool_def;
 extern const kelp_tool_def_t kelp_web_fetch_tool_def;
 
+/* ---- Desktop tool definitions (forwarded via gateway to kelp-desktop) --- */
+
+static int desktop_tool_noop(kelp_tool_ctx_t *ctx, const char *args_json,
+                              kelp_tool_result_t *result)
+{
+    /* Desktop tools are handled by the gateway JSON-RPC dispatch.
+     * These definitions exist only so the AI sees them in the tool list.
+     * Actual execution happens via desktop.* JSON-RPC forwarding. */
+    (void)ctx;
+    result->output = strdup("[forwarded to desktop]");
+    result->is_error = false;
+    return 0;
+}
+
+static const kelp_tool_def_t kelp_desktop_tools[] = {
+    {
+        .name = "desktop_move_cursor",
+        .description = "Move the AI cursor to a position on screen. "
+                       "The cursor animates smoothly to the target.",
+        .params_json = "{\"type\":\"object\",\"properties\":{"
+                       "\"x\":{\"type\":\"number\",\"description\":\"X coordinate\"},"
+                       "\"y\":{\"type\":\"number\",\"description\":\"Y coordinate\"}"
+                       "},\"required\":[\"x\",\"y\"]}",
+        .exec = desktop_tool_noop,
+    },
+    {
+        .name = "desktop_click",
+        .description = "Click at a position on the desktop. This moves the AI "
+                       "cursor and performs a click, which can open dock items "
+                       "or interact with panels.",
+        .params_json = "{\"type\":\"object\",\"properties\":{"
+                       "\"x\":{\"type\":\"number\",\"description\":\"X coordinate\"},"
+                       "\"y\":{\"type\":\"number\",\"description\":\"Y coordinate\"}"
+                       "},\"required\":[\"x\",\"y\"]}",
+        .exec = desktop_tool_noop,
+    },
+    {
+        .name = "desktop_type",
+        .description = "Type text into the currently focused panel. If the chat "
+                       "panel is focused, types into the chat input. If the "
+                       "terminal is focused, types into the shell. Use \\n for Enter.",
+        .params_json = "{\"type\":\"object\",\"properties\":{"
+                       "\"text\":{\"type\":\"string\",\"description\":\"Text to type\"}"
+                       "},\"required\":[\"text\"]}",
+        .exec = desktop_tool_noop,
+    },
+    {
+        .name = "desktop_open_panel",
+        .description = "Open a desktop panel. Available panels: chat, terminal, "
+                       "monitor, files. The panel slides in with animation.",
+        .params_json = "{\"type\":\"object\",\"properties\":{"
+                       "\"name\":{\"type\":\"string\","
+                       "\"enum\":[\"chat\",\"terminal\",\"monitor\",\"files\"],"
+                       "\"description\":\"Panel name to open\"}"
+                       "},\"required\":[\"name\"]}",
+        .exec = desktop_tool_noop,
+    },
+    {
+        .name = "desktop_get_state",
+        .description = "Get the current desktop state as JSON, including screen "
+                       "dimensions, panel positions, cursor location, and which "
+                       "panels are open.",
+        .params_json = "{\"type\":\"object\",\"properties\":{}}",
+        .exec = desktop_tool_noop,
+    },
+};
+
 /* ---- Tool context lifecycle --------------------------------------------- */
 
 kelp_tool_ctx_t *kelp_tool_ctx_new(const char *workspace_dir)
@@ -224,6 +291,11 @@ int kelp_tool_register_defaults(kelp_tool_ctx_t *ctx)
     rc |= kelp_tool_register(ctx, &kelp_file_read_tool_def);
     rc |= kelp_tool_register(ctx, &kelp_file_write_tool_def);
     rc |= kelp_tool_register(ctx, &kelp_web_fetch_tool_def);
+
+    /* Register desktop control tools. */
+    for (size_t i = 0; i < sizeof(kelp_desktop_tools) / sizeof(kelp_desktop_tools[0]); i++) {
+        rc |= kelp_tool_register(ctx, &kelp_desktop_tools[i]);
+    }
 
     if (rc != 0) {
         KELP_WARN("tool: some default tools failed to register");

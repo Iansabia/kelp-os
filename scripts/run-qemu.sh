@@ -37,11 +37,11 @@ if [ -z "${QEMU}" ]; then
 fi
 
 printf '\033[32m'
-printf '  Kelp OS — QEMU Boot\n'
+printf '  Kelp OS — QEMU Boot (Graphical Desktop)\n'
 printf '\033[0m\n'
 printf '  API:  localhost:3000\n'
 printf '  SSH:  localhost:2222\n'
-printf '  Exit: Ctrl+A then X\n\n'
+printf '  Exit: Close window or Ctrl+C\n\n'
 
 # Create a writable copy of rootfs
 ROOTFS_WORK="/tmp/kelp-rootfs.ext4"
@@ -53,14 +53,25 @@ if [ -c /dev/kvm ] && [ -w /dev/kvm ]; then
     ACCEL_OPTS="-enable-kvm -cpu host"
 fi
 
+# Detect display backend
+DISPLAY_OPTS=""
+if [ "$(uname)" = "Darwin" ]; then
+    DISPLAY_OPTS="-display cocoa"
+else
+    DISPLAY_OPTS="-display gtk"
+fi
+
 exec ${QEMU} \
     -M pc \
     ${ACCEL_OPTS} \
-    -m 1024 \
+    -m 2048 \
     -smp 2 \
     -kernel "${BZIMAGE}" \
     -drive "file=${ROOTFS_WORK},format=raw,if=virtio" \
-    -append "root=/dev/vda rw console=ttyS0 quiet loglevel=3 vt.global_cursor_default=0" \
+    -append "root=/dev/vda rw quiet loglevel=3" \
+    -device virtio-gpu-pci \
+    -device virtio-keyboard-pci \
+    -device virtio-mouse-pci \
+    ${DISPLAY_OPTS} \
     -netdev user,id=net0,hostfwd=tcp::3000-:3000,hostfwd=tcp::2222-:22 \
-    -device virtio-net-pci,netdev=net0 \
-    -nographic
+    -device virtio-net-pci,netdev=net0

@@ -32,4 +32,37 @@ ifeq ($(BR2_PACKAGE_NCURSES),y)
 KELP_SYSTEM_DEPENDENCIES += ncurses
 endif
 
+# Graphical desktop dependencies
+ifeq ($(BR2_PACKAGE_SDL2),y)
+KELP_SYSTEM_DEPENDENCIES += sdl2
+endif
+
+ifeq ($(BR2_PACKAGE_CAIRO),y)
+KELP_SYSTEM_DEPENDENCIES += cairo
+endif
+
+ifeq ($(BR2_PACKAGE_PANGO),y)
+KELP_SYSTEM_DEPENDENCIES += pango
+endif
+
+ifeq ($(BR2_PACKAGE_LIBDRM),y)
+KELP_SYSTEM_DEPENDENCIES += libdrm
+endif
+
+ifeq ($(BR2_PACKAGE_LIBINPUT),y)
+KELP_SYSTEM_DEPENDENCIES += libinput
+endif
+
+ifeq ($(BR2_PACKAGE_FONTCONFIG),y)
+KELP_SYSTEM_DEPENDENCIES += fontconfig
+endif
+
+ifeq ($(BR2_PACKAGE_FREETYPE),y)
+KELP_SYSTEM_DEPENDENCIES += freetype
+endif
+
+ifeq ($(BR2_PACKAGE_HARFBUZZ),y)
+KELP_SYSTEM_DEPENDENCIES += harfbuzz
+endif
+
 $(eval $(cmake-package))

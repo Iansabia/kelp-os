@@ -55,6 +55,27 @@ add_subdirectory(lib/terminal)
 add_subdirectory(lib/agents)
 add_subdirectory(lib/kernel)
 
+# Graphics stack (optional, for kelp-desktop)
+pkg_check_modules(SDL2      QUIET IMPORTED_TARGET sdl2)
+pkg_check_modules(CAIRO     QUIET IMPORTED_TARGET cairo)
+pkg_check_modules(PANGOCAIRO QUIET IMPORTED_TARGET pangocairo)
+
+if(SDL2_FOUND)
+    message(STATUS "  SDL2 : found")
+else()
+    message(STATUS "  SDL2 : NOT found")
+endif()
+if(CAIRO_FOUND)
+    message(STATUS "  Cairo : found")
+else()
+    message(STATUS "  Cairo : NOT found")
+endif()
+if(PANGOCAIRO_FOUND)
+    message(STATUS "  PangoCairo : found")
+else()
+    message(STATUS "  PangoCairo : NOT found")
+endif()
+
 # -----------------------------------------------------------------------------
 # Executables
 # -----------------------------------------------------------------------------
@@ -62,6 +83,11 @@ add_subdirectory(bin/kelp)
 add_subdirectory(bin/kelp-gateway)
 add_subdirectory(bin/kelp-tui)
 add_subdirectory(bin/kelp-daemon)
+
+# Graphical desktop (only if SDL2 + Cairo + Pango are available)
+if(SDL2_FOUND AND CAIRO_FOUND AND PANGOCAIRO_FOUND)
+    add_subdirectory(bin/kelp-desktop)
+endif()
 
 # -----------------------------------------------------------------------------
 # Channel plugins
